@@ -142,16 +142,36 @@ class Literature:
     def __repr__(self):
         return f"Literature(citekey={self.citekey}, title={self.title})"
 
-# Helper to create a Literature object from a Zotero item (row or dict)
-def create_literature_from_item(item):
-    citekey = item.get("data.citekey")
-    title = item.get("data.title")
-    zotero_link = item.get("data.zotero_link")
-    abstract = item.get("data.abstractNote", "")
-    aliases = [
-        f"{item.get('meta.creatorSummary', '')} ({item.get('data.year', '')})",
-        f"{item.get('meta.creatorSummary', '')}, ({item.get('data.year', '')})",
-        title
-    ]
-    tags = ["paper"]
-    return Literature(citekey, title, zotero_link, abstract, aliases, tags)
+    @classmethod
+    def from_item(cls, item):
+        """Create a Literature object from a Zotero item (row or dict)."""
+        citekey = item.get("data.citekey")
+        title = item.get("data.title")
+        zotero_link = item.get("data.zotero_link")
+        abstract = item.get("data.abstractNote", "")
+        aliases = [
+            f"{item.get('meta.creatorSummary', '')} ({item.get('data.year', '')})",
+            f"{item.get('meta.creatorSummary', '')}, ({item.get('data.year', '')})",
+            title
+        ]
+        tags = ["paper"]
+        return cls(citekey, title, zotero_link, abstract, aliases, tags)
+
+    @classmethod
+    def from_frontmatter(cls, frontmatter_dict):
+        """Create a Literature object from a markdown frontmatter dictionary, supporting nested items as properties."""
+        citekey = frontmatter_dict.get("citekey")
+        title = frontmatter_dict.get("title")
+        zotero_link = frontmatter_dict.get("zotero")
+        abstract = frontmatter_dict.get("abstract", "")
+        aliases = frontmatter_dict.get("aliases", [])
+        tags = frontmatter_dict.get("tags", [])
+        # Collect any additional properties (including nested items)
+        extra_properties = {}
+        for k, v in frontmatter_dict.items():
+            if k not in {"citekey", "title", "zotero", "abstract", "aliases", "tags"}:
+                extra_properties[k] = v
+        obj = cls(citekey, title, zotero_link, abstract, aliases, tags)
+        for k, v in extra_properties.items():
+            setattr(obj, k, v)
+        return obj
